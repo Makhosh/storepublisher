@@ -25,10 +25,12 @@ class StorePublisherPluginTest extends Specification {
         buildFile << """
             storePublisher {
                  apkFile = file('/Users/umutatacan/Desktop/APK/Bonus-prd-release.apk')
-    huaweiAppGallery{
+   huaweiAppGallery{
         appId = '103589977'
         clientId = '719131324236973120'
+        clientSecret = '73E5D39D6250DB160676BC17A25866E92E1C4A9D495EF395243812B5C4A57876'
     }
+
             }
         """
 
