@@ -1,13 +1,10 @@
 plugins {
-    id 'groovy'
-    id 'java'
     id 'java-gradle-plugin'
     id 'maven-publish'
-    id "com.gradle.plugin-publish" version "0.16.0"
     id 'signing'
 }
 
-group 'com.umutata'
+group 'io.github.makhosh'
 version '1.0'
 
 repositories {
@@ -15,8 +12,9 @@ repositories {
 }
 
 dependencies {
-    compile gradleApi()
-    testImplementation 'org.spockframework:spock-core:2.0-groovy-2.5'
+    testImplementation gradleTestKit()
+    testImplementation('org.junit.jupiter:junit-jupiter-api:5.8.1')
+    testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine:5.8.1')
     implementation 'com.google.auth:google-auth-library-oauth2-http:1.1.0'
     implementation 'com.google.apis:google-api-services-androidpublisher:v3-rev142-1.25.0'
     implementation 'com.google.guava:guava:30.1.1-jre'
@@ -30,7 +28,7 @@ test {
 gradlePlugin {
     plugins {
         storePublisher {
-            id = 'com.umutata.StorePublisherPlugin'
+            id = 'io.github.makhosh.storepublisher'
             implementationClass = 'com.umutata.StorePublisherPlugin'
         }
     }
@@ -44,16 +42,10 @@ java {
 publishing {
     publications {
         mavenJava(MavenPublication) {
+            groupId = 'io.github.makhosh'
             artifactId = 'storepublisher'
+            version = '1.0'
             from components.java
-            versionMapping {
-                usage('java-api') {
-                    fromResolutionOf('runtimeClasspath')
-                }
-                usage('java-runtime') {
-                    fromResolutionResult()
-                }
-            }
             pom {
                 name = 'Store Publisher'
                 description = 'Google Play And Huawei App Gallery File Uploader'
@@ -61,15 +53,20 @@ publishing {
                 licenses {
                     license {
                         name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                     }
                 }
                 developers {
                     developer {
-                        id = 'umutata'
+                        id = 'Makhosh'
                         name = 'Umut Atacan'
                         email = 'umutatacan@gmail.com'
                     }
+                }
+                scm {
+                    url = 'https://github.com/Makhosh/storepublisher'
+                    connection = 'scm:git:git://github.com/Makhosh/storepublisher.git'
+                    developerConnection = 'scm:git:ssh://git@github.com:Makhosh/storepublisher.git'
                 }
             }
 
@@ -77,9 +74,11 @@ publishing {
     }
     repositories {
         maven {
-            def releasesRepoUrl = layout.buildDirectory.dir('repos/releases')
-            def snapshotsRepoUrl = layout.buildDirectory.dir('repos/snapshots')
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            url "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
+            credentials {
+                username sonatypeUsername
+                password sonatypePassword
+            }
         }
     }
 }
