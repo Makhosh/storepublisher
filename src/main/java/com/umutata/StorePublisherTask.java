@@ -15,15 +15,15 @@ import com.google.api.services.androidpublisher.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.umutata.model.FileInfo;
 import com.umutata.model.FileServerOriResult;
+import com.umutata.model.UploadAppFileInfoResponse;
 import org.apache.http.Consts;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.*;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
@@ -38,7 +38,7 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +48,8 @@ public abstract class StorePublisherTask extends DefaultTask {
     static final String MIME_TYPE_APK = "application/vnd.android.package-archive";
 
     private String fileType;
+
+    Gson gson = new Gson();
 
     @Input
     @Optional
@@ -131,19 +133,6 @@ public abstract class StorePublisherTask extends DefaultTask {
             final String editId = edit.getId();
             System.out.println("Created edit with id: " + editId);
 
-
-            ApksListResponse apksResponse = edits
-                    .apks()
-                    .list(packageName,
-                            edit.getId()).execute();
-
-            // Print the apk info.
-            for (Apk apk : apksResponse.getApks()) {
-                System.out.println(
-                        String.format("Version: %d - Binary sha1: %s", apk.getVersionCode(),
-                                apk.getBinary().getSha1()));
-            }
-
             // Upload new apk to developer console
             final AbstractInputStreamContent apkFile =
                     new FileContent(MIME_TYPE_APK, getApkFile().get().getAsFile());
@@ -214,7 +203,7 @@ public abstract class StorePublisherTask extends DefaultTask {
 
     }
 
-    private String callHuaweiServer(HttpRequestBase httpRequestBase) throws IOException {
+    private JsonObject callHuaweiServer(HttpRequestBase httpRequestBase) throws IOException {
 
         try (CloseableHttpClient httpClient = HttpClients.createSystem();
              CloseableHttpResponse response = httpClient.execute(httpRequestBase)) {
@@ -223,9 +212,9 @@ public abstract class StorePublisherTask extends DefaultTask {
             if (statusCode == HttpStatus.SC_OK) {
                 BufferedReader br =
                         new BufferedReader(new InputStreamReader(response.getEntity().getContent(), Consts.UTF_8));
-                return br.readLine();
+                return gson.fromJson(br.readLine(), JsonObject.class);
             } else {
-                throw new GradleException("Response:" + statusCode);
+                throw new GradleException(response.getStatusLine().toString());
             }
         }
     }
@@ -243,49 +232,44 @@ public abstract class StorePublisherTask extends DefaultTask {
             throw new GradleException("Get Token Failed");
         }
 
-        HttpPost post = new HttpPost("https://connect-api.cloud.huawei.com/api/oauth2/v1/token");
-
         JsonObject keyString = new JsonObject();
         keyString.addProperty("client_id", getClientId().get());
         keyString.addProperty("client_secret", secret);
         keyString.addProperty("grant_type", "client_credentials");
 
-        StringEntity entity = new StringEntity(keyString.toString(), StandardCharsets.UTF_8);
-        entity.setContentEncoding("UTF-8");
-        entity.setContentType("application/json");
-        post.setEntity(entity);
+        HttpPost post = new HttpPost("https://connect-api.cloud.huawei.com/api/oauth2/v1/token");
+        post.setEntity(getStringEntity(keyString.toString()));
 
-        String result = callHuaweiServer(post);
-        JsonObject jsonObject = new Gson().fromJson(result, JsonObject.class);
-        return jsonObject.get("access_token").getAsString();
+        JsonObject result = callHuaweiServer(post);
+        return result.get("access_token").getAsString();
     }
 
-    public JsonObject getUploadUrl(String clientId, String appId) throws IOException {
+    public JsonObject getUploadUrl(String token) throws IOException {
 
-        String token = getToken();
-
-        System.out.println("Get token for upload: " + token);
-
-        HttpGet get = new HttpGet("https://connect-api.cloud.huawei.com/api/publish/v2/upload-url?appId=" + appId + "&suffix=" + fileType);
+        HttpGet get = new HttpGet("https://connect-api.cloud.huawei.com/api/publish/v2/upload-url?appId=" + getAppId().get() + "&suffix=" + fileType);
         get.setHeader("Authorization", "Bearer " + token);
-        get.setHeader("client_id", clientId);
+        get.setHeader("client_id", getClientId().get());
 
-        String result = callHuaweiServer(get);
-        return new Gson().fromJson(result, JsonObject.class);
+        return callHuaweiServer(get);
     }
 
     public void uploadToHuaweiAppGallery() throws IOException {
-        JsonObject object = getUploadUrl(getClientId().get(), getAppId().get());
 
+        String token = getToken();
+        System.out.println("Get token for upload: " + token);
+
+        JsonObject object = getUploadUrl(token);
         String authCode = object.get("authCode").getAsString();
-
         String uploadUrl = object.get("uploadUrl").getAsString();
 
         System.out.println("Auth code for upload: " + authCode);
         System.out.println("Upload URL: " + uploadUrl);
 
-        HttpPost post = new HttpPost(uploadUrl);
+        List<FileInfo> uploadFileList = uploadFile(authCode, uploadUrl);
+        updateAppFileInfo(token, uploadFileList);
+    }
 
+    private List<FileInfo> uploadFile(String authCode, String uploadUrl) throws IOException {
         // File to upload.
         FileBody bin = new FileBody(getApkFile().get().getAsFile());
 
@@ -297,16 +281,56 @@ public abstract class StorePublisherTask extends DefaultTask {
                 .addTextBody("parseType", "1")
                 .build();
 
+        HttpPost post = new HttpPost(uploadUrl);
         post.setEntity(reqEntity);
         post.addHeader("accept", "application/json");
 
-        String result = callHuaweiServer(post);
-        FileServerOriResult fileServerResult = new Gson().fromJson(result, FileServerOriResult.class);
+        JsonObject result = callHuaweiServer(post);
+        FileServerOriResult fileServerResult = gson.fromJson(result, FileServerOriResult.class);
         // Obtain the result code.
-        if (!"0".equals(fileServerResult.getResult().getResultCode())) {
-            System.out.println("Huawei App Gallery upload error");
+        if (!"0".equals(fileServerResult.getResult().getResultCode()) || !fileServerResult.getResult().getUploadFileRsp().getIfSuccess().equalsIgnoreCase("1")) {
+            throw new GradleException("Huawei App Gallery upload error");
         } else {
-            System.out.println("Huawei App Gallery upload success");
+            return fileServerResult.getResult().getUploadFileRsp().getFileInfoList();
         }
+    }
+
+    private void updateAppFileInfo(String token, List<FileInfo> files) throws IOException {
+
+        JsonObject keyString = new JsonObject();
+        keyString.addProperty("fileType", 5);
+
+        FileInfo fileInfo = files.get(0);
+
+        JsonObject file = new JsonObject();
+        file.addProperty("fileName", getApkFile().get().getAsFile().getName());
+        file.addProperty("fileSize", fileInfo.getSize());
+        file.addProperty("fileDestUrl", fileInfo.getFileDestUlr());
+
+        JsonArray filesList = new JsonArray();
+        filesList.add(file);
+
+        keyString.add("files", file);
+
+        HttpPut put = new HttpPut("https://connect-api.cloud.huawei.com/api/publish/v2/app-file-info?appId=" + getAppId().get());
+        put.setHeader("Authorization", "Bearer " + token);
+        put.setHeader("client_id", getClientId().get());
+        put.setEntity(getStringEntity(keyString.toString()));
+
+        JsonObject object = callHuaweiServer(put);
+        UploadAppFileInfoResponse result = gson.fromJson(object, UploadAppFileInfoResponse.class);
+        if (result.getRet().getCode().equalsIgnoreCase("0")){
+            System.out.println("Successfully completed for upload Huawei App Gallery for " + getClientId().get());
+        }
+        else{
+            throw new GradleException("Huawei App Gallery upload error" + result.getRet().getCode() + "- " + result.getRet().getMsg());
+        }
+    }
+
+    private StringEntity getStringEntity(String keyString){
+        StringEntity entity = new StringEntity(keyString, Charset.forName("UTF-8"));
+        entity.setContentEncoding("UTF-8");
+        entity.setContentType("application/json");
+        return entity;
     }
 }

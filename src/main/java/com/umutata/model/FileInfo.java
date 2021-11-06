@@ -1,12 +1,5 @@
-
 package com.umutata.model;
 
-/**
- * Function description.
- *
- * @author xxxxxxx
- * @since 2019-10-24
- */
 public class FileInfo {
     public String getFileDestUlr() {
         return fileDestUlr;

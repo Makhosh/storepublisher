@@ -1,11 +1,11 @@
 plugins {
-    `java-library`
+    `java-gradle-plugin`
     `maven-publish`
     signing
 }
 
 group = "io.github.makhosh"
-version = "1.1"
+version = "1.0.3"
 
 val sonatypeUsername = project.properties["sonatypeUsername"]
 val sonatypePassword = project.properties["sonatypePassword"]
@@ -14,10 +14,16 @@ repositories {
     mavenCentral()
 }
 
+gradlePlugin {
+    plugins {
+        create("storePublisher") {
+            id = "io.github.makhosh.storepublisher"
+            implementationClass = "com.umutata.StorePublisherPlugin"
+        }
+    }
+}
 
 dependencies {
-    implementation(gradleApi())
-    testImplementation(gradleTestKit())
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
@@ -41,14 +47,6 @@ publishing {
         create<MavenPublication>("mavenJava") {
             artifactId = "storepublisher"
             from(components["java"])
-            versionMapping {
-                usage("java-api") {
-                    fromResolutionOf("runtimeClasspath")
-                }
-                usage("java-runtime") {
-                    fromResolutionResult()
-                }
-            }
             pom {
                 name.set("Store Publisher")
                 description.set("Google Play And Huawei App Gallery File Uploader")

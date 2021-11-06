@@ -1,14 +1,7 @@
-
 package com.umutata.model;
 
 import java.util.List;
 
-/**
- * Function description.
- *
- * @author xxxxxxx
- * @since 2019-10-24
- */
 public class UploadFileRsp {
     public String getIfSuccess() {
         return ifSuccess;

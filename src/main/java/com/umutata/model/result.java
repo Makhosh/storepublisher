@@ -1,12 +1,5 @@
-
 package com.umutata.model;
 
-/**
- * Function description.
- *
- * @author xxxxxxx
- * @since 2019-10-24
- */
 public class result
 {
     public String getResultCode() {
@@ -18,14 +11,14 @@ public class result
     }
 
     public UploadFileRsp getUploadFileRsp() {
-        return uploadFileRsp;
+        return UploadFileRsp;
     }
 
     public void setUploadFileRsp(UploadFileRsp uploadFileRsp) {
-        this.uploadFileRsp = uploadFileRsp;
+        this.UploadFileRsp = uploadFileRsp;
     }
 
     private String resultCode;
 
-    private UploadFileRsp uploadFileRsp;
+    private UploadFileRsp UploadFileRsp;
 }

@@ -1,14 +1,7 @@
-
 package com.umutata.model;
 
-/**
- * Function description.
- *
- * @author xxxxxxx
- * @since 2019-10-24
- */
 public class FileServerOriResult {
-    public com.umutata.model.result getResult()
+    public result getResult()
     {
         return result;
     }
