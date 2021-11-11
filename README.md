@@ -1,7 +1,7 @@
 # Google Play and Huawei App Gallery APK/AAB Uploader
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.makhosh/storepublisher.svg)](https://search.maven.org/artifact/io.github.makhosh/storepublisher)
-![Version](https://img.shields.io/badge/Version-1.0.3-green.svg)
+![Version](https://img.shields.io/badge/Version-1.0.4-green.svg)
 [![License](https://img.shields.io/github/license/srs/gradle-node-plugin.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 # Experimental Build
@@ -13,11 +13,10 @@ The plugin allows you to publish the android release build file (*.apk or *.aab)
 The following features are available:
 
 * Upload APK or AAB build file in HUAWEI AppGallery
-* Publish APK build file in Google Play on any track(alpha, release...)
+* Publish APK or AAB build file in Google Play on any track(alpha, release...)
 
 The following features are missing:
 
-* Publish AAB build file in Google play.
 * Waits for feedback..
 
 # Test
@@ -37,7 +36,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "io.github.makhosh:storepublisher:1.0.3"
+        classpath "io.github.makhosh:storepublisher:1.0.4"
     }
 }
 
@@ -50,12 +49,12 @@ apply plugin: 'io.github.makhosh.storepublisher'
 
 ```groovy
 storePublisher{
-    apkFile = file('')
+    artifactFile = file('')
 
     googlePlay{
             applicationId = ''
             track = ''
-            credential = ''
+            credential = file('')
     }
 
     huaweiAppGallery{
@@ -77,7 +76,7 @@ How to get credentials for Google Play, please see [How to create a Service Acco
 | apkFile       | Mandatory | null          | File path of artifact
 | applicationId | Mandatory | null          | Defined your application default config. Example: com.facebook.katana
 | track         | Optional  | "alpha"       | Target stage for Google Play, i.e. `internal`/`alpha`/`beta`/`production`
-| credential    | Mandatory | null          | Google Play service account credential. Add JSON content as String.
+| credential    | Mandatory | null          | Google Play service account credential. Add JSON file path.
 | appId         | Mandatory | null          | HUAWEI AppGallery Application ID. Example: Tiktok App ID: 100315379             
 | clientId      | Mandatory | null          | HUAWEI AppGallery Connect API Client Id
 | clientSecret  | Mandatory | null          | HUAWEI AppGallery Connect API Cliend Secret
