@@ -9,7 +9,7 @@ public class StorePublisherPlugin implements Plugin<Project> {
                 project.getExtensions().create("storePublisher", StorePublisherExtension.class);
 
         project.getTasks().register("storePublisher", com.umutata.StorePublisherTask.class, task -> {
-            task.getApkFile().set(extension.getApkFile());
+            task.getArtifactFile().set(extension.getArtifactFile());
             task.getApplicationId().set(extension.getGooglePlay().getApplicationId());
             task.getCredential().set(extension.getGooglePlay().getCredential());
             task.getTrack().set(extension.getGooglePlay().getTrack());

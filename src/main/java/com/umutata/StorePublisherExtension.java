@@ -6,7 +6,7 @@ import org.gradle.api.tasks.Nested;
 
 public abstract class StorePublisherExtension {
 
-    public abstract RegularFileProperty getApkFile();
+    public abstract RegularFileProperty getArtifactFile();
 
     @Nested
     public abstract GooglePlay getGooglePlay();

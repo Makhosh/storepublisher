@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.github.makhosh"
-version = "1.0.3"
+version = "1.0.4"
 
 val sonatypeUsername = project.properties["sonatypeUsername"]
 val sonatypePassword = project.properties["sonatypePassword"]

@@ -7,7 +7,6 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.androidpublisher.AndroidPublisher;
 import com.google.api.services.androidpublisher.AndroidPublisher.Edits;
-import com.google.api.services.androidpublisher.AndroidPublisher.Edits.Apks.Upload;
 import com.google.api.services.androidpublisher.AndroidPublisher.Edits.Insert;
 import com.google.api.services.androidpublisher.AndroidPublisher.Edits.Tracks.Update;
 import com.google.api.services.androidpublisher.AndroidPublisherScopes;
@@ -38,14 +37,14 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
 import java.io.*;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public abstract class StorePublisherTask extends DefaultTask {
 
-    static final String MIME_TYPE_APK = "application/vnd.android.package-archive";
+    static final String MIME_TYPE = "application/octet-stream";
 
     private String fileType;
 
@@ -53,7 +52,7 @@ public abstract class StorePublisherTask extends DefaultTask {
 
     @Input
     @Optional
-    public abstract RegularFileProperty getApkFile();
+    public abstract RegularFileProperty getArtifactFile();
 
     @Input
     @Optional
@@ -82,13 +81,13 @@ public abstract class StorePublisherTask extends DefaultTask {
     @TaskAction
     private void storePublisher() {
 
-        if (getApkFile().getOrNull() == null) {
+        if (getArtifactFile().getOrNull() == null) {
             System.out.println("Apk File missed. Please add APK file to gradle config");
             return;
         } else {
-            fileType = getApkFile().get().getAsFile().getAbsolutePath();
+            fileType = getArtifactFile().get().getAsFile().getAbsolutePath();
             fileType = fileType.substring(fileType.length() - 3);
-            if (!fileType.equalsIgnoreCase("apk")) {
+            if (!fileType.equalsIgnoreCase("apk") && !fileType.equalsIgnoreCase("aab")) {
                 System.out.println("File format not correct");
                 return;
             }
@@ -133,16 +132,27 @@ public abstract class StorePublisherTask extends DefaultTask {
             final String editId = edit.getId();
             System.out.println("Created edit with id: " + editId);
 
-            // Upload new apk to developer console
+            // Upload new package to developer console
             final AbstractInputStreamContent apkFile =
-                    new FileContent(MIME_TYPE_APK, getApkFile().get().getAsFile());
-            Upload uploadRequest = edits
-                    .apks()
-                    .upload(packageName,
-                            editId,
-                            apkFile);
-            Apk apk = uploadRequest.execute();
-            System.out.println("Version code " + apk.getVersionCode() + " has been uploaded");
+                    new FileContent(MIME_TYPE, getArtifactFile().get().getAsFile());
+
+            Integer versioncode;
+
+            if (fileType.equalsIgnoreCase("apk")){
+                Edits.Apks.Upload uploadRequest = edits
+                        .apks()
+                        .upload(packageName,
+                                editId,
+                                apkFile);
+                Apk apk = uploadRequest.execute();
+                versioncode = apk.getVersionCode();
+            }else{
+                Edits.Bundles.Upload uploadBundlerequest = edits.bundles().upload(packageName,editId,apkFile);
+                Bundle bundle = uploadBundlerequest.execute();
+                versioncode = bundle.getVersionCode();
+            }
+
+            System.out.println("Version code " + versioncode + " has been uploaded");
 
             String trackRelease = "alpha";
             if (getTrack().getOrNull() != null) {
@@ -151,7 +161,7 @@ public abstract class StorePublisherTask extends DefaultTask {
 
             // Assign apk to alpha track.
             List<Long> apkVersionCodes = new ArrayList<>();
-            apkVersionCodes.add(Long.valueOf(apk.getVersionCode()));
+            apkVersionCodes.add(Long.valueOf(versioncode));
             Update updateTrackRequest = edits
                     .tracks()
                     .update(packageName,
@@ -198,9 +208,17 @@ public abstract class StorePublisherTask extends DefaultTask {
                 .createScoped(Collections.singleton(AndroidPublisherScopes.ANDROIDPUBLISHER));
 
         HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(credentials);
-        AndroidPublisher.Builder ab = new AndroidPublisher.Builder(new NetHttpTransport(), JacksonFactory.getDefaultInstance(), requestInitializer);
+        AndroidPublisher.Builder ab = new AndroidPublisher.Builder(new NetHttpTransport(), JacksonFactory.getDefaultInstance(), setHttpTimeout(requestInitializer));
         return ab.setApplicationName(getApplicationId().get()).build();
 
+    }
+
+    HttpRequestInitializer setHttpTimeout(final HttpRequestInitializer requestInitializer) {
+        return httpRequest -> {
+            requestInitializer.initialize(httpRequest);
+            httpRequest.setConnectTimeout(2 * 60000);  // 2 minutes connect timeout
+            httpRequest.setReadTimeout(2 * 60000);  // 2 minutes read timeout
+        };
     }
 
     private JsonObject callHuaweiServer(HttpRequestBase httpRequestBase) throws IOException {
@@ -271,7 +289,7 @@ public abstract class StorePublisherTask extends DefaultTask {
 
     private List<FileInfo> uploadFile(String authCode, String uploadUrl) throws IOException {
         // File to upload.
-        FileBody bin = new FileBody(getApkFile().get().getAsFile());
+        FileBody bin = new FileBody(getArtifactFile().get().getAsFile());
 
         // Construct a POST request.
         HttpEntity reqEntity = MultipartEntityBuilder.create()
@@ -303,7 +321,7 @@ public abstract class StorePublisherTask extends DefaultTask {
         FileInfo fileInfo = files.get(0);
 
         JsonObject file = new JsonObject();
-        file.addProperty("fileName", getApkFile().get().getAsFile().getName());
+        file.addProperty("fileName", getArtifactFile().get().getAsFile().getName());
         file.addProperty("fileSize", fileInfo.getSize());
         file.addProperty("fileDestUrl", fileInfo.getFileDestUlr());
 
@@ -328,7 +346,7 @@ public abstract class StorePublisherTask extends DefaultTask {
     }
 
     private StringEntity getStringEntity(String keyString){
-        StringEntity entity = new StringEntity(keyString, Charset.forName("UTF-8"));
+        StringEntity entity = new StringEntity(keyString, StandardCharsets.UTF_8);
         entity.setContentEncoding("UTF-8");
         entity.setContentType("application/json");
         return entity;
