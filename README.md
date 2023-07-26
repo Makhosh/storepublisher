@@ -1,7 +1,7 @@
 # Google Play and Huawei App Gallery APK/AAB Uploader
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.makhosh/storepublisher.svg)](https://search.maven.org/artifact/io.github.makhosh/storepublisher)
-![Version](https://img.shields.io/badge/Version-1.0.4-green.svg)
+![Version](https://img.shields.io/badge/Version-1.0.5-green.svg)
 [![License](https://img.shields.io/github/license/srs/gradle-node-plugin.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 # Experimental Build
@@ -21,7 +21,7 @@ The following features are missing:
 
 # Test
 
-The plugin tested AGP 4.1.3 - Gradle 6.5.
+The plugin tested AGP 4.2.2 - Gradle 8.2.1.
 
 # Adding the plugin to your project
 
@@ -36,7 +36,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "io.github.makhosh:storepublisher:1.0.4"
+        classpath "io.github.makhosh:storepublisher:1.0.5"
     }
 }
 

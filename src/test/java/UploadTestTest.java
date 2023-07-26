@@ -24,7 +24,7 @@ class UploadTestTest {
         String text = "plugins {\n" +
                 "                id 'io.github.makhosh.storepublisher'\n" +
                 "            }\n  storePublisher {\n" +
-                "                 apkFile = file('/Users/umutatacan/Desktop/APK/Bonus-prd-release.apk')\n" +
+                "                 artifactFile = file('/Users/umutata/Downloads/Bonus-prd-release-protected.aab')\n" +
                 "\n" +
                 "            }";
         Files.write(buildFile.toPath(), Collections.singletonList(text));

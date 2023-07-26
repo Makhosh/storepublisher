@@ -32,9 +32,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.*;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -50,15 +48,14 @@ public abstract class StorePublisherTask extends DefaultTask {
 
     Gson gson = new Gson();
 
-    @Input
-    @Optional
+    @InputFile
     public abstract RegularFileProperty getArtifactFile();
 
     @Input
     @Optional
     public abstract Property<String> getApplicationId();
 
-    @Input
+    @InputFile
     @Optional
     public abstract RegularFileProperty getCredential();
 
@@ -77,6 +74,11 @@ public abstract class StorePublisherTask extends DefaultTask {
     @Input
     @Optional
     public abstract Property<String> getClientSecret();
+    @Internal
+    private String token;
+
+    @Internal
+    private String uploadUrl;
 
     @TaskAction
     private void storePublisher() {
@@ -262,7 +264,7 @@ public abstract class StorePublisherTask extends DefaultTask {
         return result.get("access_token").getAsString();
     }
 
-    public JsonObject getUploadUrl(String token) throws IOException {
+    public JsonObject getUploadUrl() throws IOException {
 
         HttpGet get = new HttpGet("https://connect-api.cloud.huawei.com/api/publish/v2/upload-url?appId=" + getAppId().get() + "&suffix=" + fileType);
         get.setHeader("Authorization", "Bearer " + token);
@@ -273,21 +275,21 @@ public abstract class StorePublisherTask extends DefaultTask {
 
     public void uploadToHuaweiAppGallery() throws IOException {
 
-        String token = getToken();
+        token = getToken();
         System.out.println("Get token for upload: " + token);
 
-        JsonObject object = getUploadUrl(token);
+        JsonObject object = getUploadUrl();
         String authCode = object.get("authCode").getAsString();
-        String uploadUrl = object.get("uploadUrl").getAsString();
+        uploadUrl = object.get("uploadUrl").getAsString();
 
         System.out.println("Auth code for upload: " + authCode);
         System.out.println("Upload URL: " + uploadUrl);
 
-        List<FileInfo> uploadFileList = uploadFile(authCode, uploadUrl);
-        updateAppFileInfo(token, uploadFileList);
+        List<FileInfo> uploadFileList = uploadFile(authCode);
+        updateAppFileInfo(uploadFileList);
     }
 
-    private List<FileInfo> uploadFile(String authCode, String uploadUrl) throws IOException {
+    private List<FileInfo> uploadFile(String authCode) throws IOException {
         // File to upload.
         FileBody bin = new FileBody(getArtifactFile().get().getAsFile());
 
@@ -313,7 +315,7 @@ public abstract class StorePublisherTask extends DefaultTask {
         }
     }
 
-    private void updateAppFileInfo(String token, List<FileInfo> files) throws IOException {
+    private void updateAppFileInfo(List<FileInfo> files) throws IOException {
 
         JsonObject keyString = new JsonObject();
         keyString.addProperty("fileType", 5);

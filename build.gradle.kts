@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.github.makhosh"
-version = "1.0.4"
+version = "1.0.5"
 
 val sonatypeUsername = project.properties["sonatypeUsername"]
 val sonatypePassword = project.properties["sonatypePassword"]
@@ -24,13 +24,13 @@ gradlePlugin {
 }
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
-    implementation("com.google.auth:google-auth-library-oauth2-http:1.1.0")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.19.0")
     implementation("com.google.apis:google-api-services-androidpublisher:v3-rev142-1.25.0")
-    implementation("com.google.guava:guava:30.1.1-jre")
-    implementation("org.apache.httpcomponents:httpmime:4.5.13")
+    implementation("com.google.guava:guava:32.1.1-jre")
+    implementation("org.apache.httpcomponents:httpmime:4.5.14")
 }
 
 tasks.named<Test>("test") {
